@@ -1,31 +1,31 @@
-use std::io::{self, stdout, Read};
+use std::io::{self, stdout};
+use termion::event::Key;
+use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
-fn ctrl_byte(c: char) -> u8 {
-    c as u8 & &0b0001_1111
-}
-
 fn die(e: std::io::Error) {
-    panic!(e);
+    panic!("{}", e);
 }
 
 fn main() {
     let _raw_stdout = stdout().into_raw_mode().unwrap();
 
-    for b in io::stdin().bytes() {
-        match b {
-            Ok(by) => {
-                let c = by as char;
-                println!("{}", c);
-                if c.is_control() {
-                    println!("{:?} \r", by);
-                } else {
-                    println!("{:?} ({})\r", by, c);
+    for key in io::stdin().keys() {
+        match key {
+            Ok(k) => match k {
+                Key::Char(c) => {
+                    if c.is_control() {
+                        println!("{:?} \r", c as u8);
+                    } else {
+                        println!("{:?} ({})\r", c as u8, c);
+                    }
                 }
-                if by == ctrl_byte('q') {
+                Key::Ctrl('q') => {
+                    println!("Exiting");
                     break;
                 }
-            }
+                _ => println!("{:?}\r", k),
+            },
             Err(err) => die(err),
         }
     }
