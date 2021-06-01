@@ -1,6 +1,6 @@
 #![warn(clippy::all, clippy::pedantic)]
-use ka::editor::Editor;
+use ka::Editor;
 
 fn main() {
-    Editor::new().run();
+    Editor::default().run();
 }
