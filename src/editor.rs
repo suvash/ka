@@ -92,7 +92,6 @@ impl Editor {
 
         if self.should_quit {
             Terminal::clear_screen();
-            println!("Quitting.\r");
         } else {
             self.draw_rows();
             self.draw_status_bar();
