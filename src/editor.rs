@@ -49,11 +49,10 @@ impl Editor {
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
         let mut initial_status = String::from("HELP: Ctrl-S = save | Ctrl-Q = quit");
-        let document = if args.len() > 1 {
-            let file_name = &args[1];
+        let document = if let Some(file_name) = args.get(1) {
             let doc = Document::open(&file_name);
-            if doc.is_ok() {
-                doc.unwrap()
+            if let Ok(doc) = doc {
+                doc
             } else {
                 initial_status = format!("ERR: Could not open file: {}", file_name);
                 Document::default()
@@ -132,10 +131,9 @@ impl Editor {
             self.cursor_position.y.saturating_add(1),
             self.document.len()
         );
+        #[allow(clippy::integer_arithmetic)]
         let len = status.len() + line_indicator.len();
-        if width > len {
-            status.push_str(&" ".repeat(width - len));
-        }
+        status.push_str(&" ".repeat(width.saturating_sub(len)));
         status = format!("{}{}", status, line_indicator);
         status.truncate(width);
 
@@ -160,6 +158,7 @@ impl Editor {
         let mut welcome_message = format!("{} editor -- version {}\r", NAME, VERSION);
         let width = self.terminal.size().width as usize;
         let len = welcome_message.len();
+        #[allow(clippy::integer_arithmetic, clippy::integer_division)]
         let padding = width.saturating_sub(len) / 2;
         let spaces = " ".repeat(padding.saturating_sub(1));
         welcome_message = format!("~{}{}", spaces, welcome_message);
@@ -170,16 +169,20 @@ impl Editor {
     pub fn draw_row(&self, row: &Row) {
         let width = self.terminal.size().width as usize;
         let start = self.offset.x;
-        let end = self.offset.x + width;
+        let end = self.offset.x.saturating_add(width);
         let row = row.render(start, end);
         println!("{}\r", row)
     }
 
+    #[allow(clippy::integer_division, clippy::integer_arithmetic)]
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
         for terminal_row in 0..height {
             Terminal::clear_current_line();
-            if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
+            if let Some(row) = self
+                .document
+                .row(self.offset.y.saturating_add(terminal_row as usize))
+            {
                 self.draw_row(row);
             } else if terminal_row == height / 3 && self.document.is_empty() {
                 self.draw_welcome_message();
@@ -227,14 +230,14 @@ impl Editor {
             }
             Key::PageUp => {
                 y = if y > terminal_height {
-                    y - terminal_height
+                    y.saturating_sub(terminal_height)
                 } else {
                     0
                 }
             }
             Key::PageDown => {
                 y = if y.saturating_add(terminal_height) < height {
-                    y + terminal_height as usize
+                    y.saturating_add(terminal_height)
                 } else {
                     height
                 }
@@ -339,11 +342,7 @@ impl Editor {
             self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
             self.refresh_screen()?;
             match Terminal::read_key()? {
-                Key::Backspace => {
-                    if !result.is_empty() {
-                        result.truncate(result.len() - 1);
-                    }
-                }
+                Key::Backspace => result.truncate(result.len().saturating_sub(1)),
                 Key::Char('\n') => break,
                 Key::Char(c) => {
                     if !c.is_control() {

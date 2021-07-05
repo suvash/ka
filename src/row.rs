@@ -24,6 +24,7 @@ impl Row {
         let min_start = cmp::min(start, min_end);
 
         let mut result = String::new();
+        #[allow(clippy::integer_arithmetic)]
         for grapheme in self.string[..]
             .graphemes(true)
             .skip(min_start)
@@ -64,6 +65,7 @@ impl Row {
         self.update_len();
     }
 
+    #[allow(clippy::integer_arithmetic)]
     pub fn delete(&mut self, at: usize) {
         if at >= self.len() {
             return;
